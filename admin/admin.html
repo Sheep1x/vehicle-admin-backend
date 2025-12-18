@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车辆管理后台系统</title>
+    <link rel="stylesheet" href="admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div class="login-container">
+        <div class="login-box">
+            <h2>车辆管理后台系统</h2>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-username">用户名</label>
+                    <input type="text" id="login-username" required placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">密码</label>
+                    <input type="password" id="login-password" required placeholder="请输入密码">
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button type="submit" class="login-btn">登录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主应用界面 -->
+    <div class="container">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-left">
+                <h1>车辆管理后台系统</h1>
+            </div>
+            <div class="header-right">
+                <span class="user-info">
+                    <span id="current-username"></span>
+                    <span id="current-role"></span>
+                </span>
+                <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- 侧边栏 -->
+            <aside class="sidebar">
+                <nav class="menu">
+                    <div class="menu-item active">
+                        <a href="#" onclick="switchTab('records')">
+                            <span class="menu-icon">📊</span>
+                            <span class="menu-text">登记记录</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('companies')">
+                            <span class="menu-icon">🏢</span>
+                            <span class="menu-text">分公司管理</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('stations')">
+                            <span class="menu-icon">🏪</span>
+                            <span class="menu-text">收费站管理</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('groups')">
+                            <span class="menu-icon">👥</span>
+                            <span class="menu-text">班组管理</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('collectors')">
+                            <span class="menu-icon">💰</span>
+                            <span class="menu-text">收费员管理</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('monitors')">
+                            <span class="menu-icon">📹</span>
+                            <span class="menu-text">监控员管理</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" onclick="switchTab('users')">
+                            <span class="menu-icon">👤</span>
+                            <span class="menu-text">用户管理</span>
+                        </a>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <!-- 登记记录页面 -->
+                <section id="records-section" class="content-section">
+                    <div class="section-header">
+                        <h2>登记记录</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="exportToExcel()">导出Excel</button>
+                            <button class="btn btn-secondary" onclick="resetFilters()">重置筛选</button>
+                        </div>
+                    </div>
+
+                    <!-- 筛选器 -->
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label for="start-date">开始日期</label>
+                                <input type="date" id="start-date" onchange="filterRecords()">
+                            </div>
+                            <div class="filter-item">
+                                <label for="end-date">结束日期</label>
+                                <input type="date" id="end-date" onchange="filterRecords()">
+                            </div>
+                            <div class="filter-item">
+                                <label for="record-company-filter">分公司</label>
+                                <select id="record-company-filter" onchange="filterRecords()">
+                                    <option value="">所有分公司</option>
+                                </select>
+                            </div>
+                            <div class="filter-item">
+                                <label for="record-station-filter">收费站</label>
+                                <select id="record-station-filter" onchange="filterRecords()">
+                                    <option value="">所有收费站</option>
+                                </select>
+                            </div>
+                            <div class="filter-item">
+                                <button class="btn btn-primary" onclick="filterRecords()">筛选</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据表格 -->
+                    <div class="table-container">
+                        <table id="records-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>车牌号</th>
+                                    <th>分公司</th>
+                                    <th>收费站</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-footer">
+                        <span class="record-count">共 0 条记录</span>
+                    </div>
+                </section>
+
+                <!-- 分公司管理页面 -->
+                <section id="companies-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>分公司管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddCompanyModal()">添加分公司</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="companies-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>分公司名称</th>
+                                    <th>地址</th>
+                                    <th>联系电话</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 收费站管理页面 -->
+                <section id="stations-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>收费站管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddStationModal()">添加收费站</button>
+                        </div>
+                    </div>
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label for="station-company-filter">分公司</label>
+                                <select id="station-company-filter" onchange="filterStations()">
+                                    <option value="">所有分公司</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="stations-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>收费站名称</th>
+                                    <th>所属分公司</th>
+                                    <th>地址</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 班组管理页面 -->
+                <section id="groups-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>班组管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddGroupModal()">添加班组</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="groups-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>班组名称</th>
+                                    <th>所属收费站</th>
+                                    <th>班长</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 收费员管理页面 -->
+                <section id="collectors-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>收费员管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddCollectorModal()">添加收费员</button>
+                        </div>
+                    </div>
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label for="collector-company-filter">分公司</label>
+                                <select id="collector-company-filter" onchange="filterCollectors()">
+                                    <option value="">所有分公司</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="collectors-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>姓名</th>
+                                    <th>工号</th>
+                                    <th>所属分公司</th>
+                                    <th>所属班组</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 监控员管理页面 -->
+                <section id="monitors-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>监控员管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddMonitorModal()">添加监控员</button>
+                        </div>
+                    </div>
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label for="monitor-company-filter">分公司</label>
+                                <select id="monitor-company-filter" onchange="filterMonitors()">
+                                    <option value="">所有分公司</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="monitors-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>姓名</th>
+                                    <th>工号</th>
+                                    <th>所属分公司</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 用户管理页面 -->
+                <section id="users-section" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>用户管理</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddUserModal()">添加用户</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="users-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>用户名</th>
+                                    <th>角色</th>
+                                    <th>所属分公司</th>
+                                    <th>所属收费站</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- 数据行模板 -->
+    <template id="record-row-template">
+        <tr>
+            <td class="record-date"></td>
+            <td class="record-plate"></td>
+            <td class="record-company"></td>
+            <td class="record-station"></td>
+            <td class="record-amount"></td>
+            <td class="record-status"></td>
+        </tr>
+    </template>
+
+    <!-- 通知容器 -->
+    <div id="notification-container"></div>
+
+    <!-- 引入JavaScript -->
+    <script src="admin.js"></script>
+</body>
+</html>
